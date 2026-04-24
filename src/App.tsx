@@ -70,16 +70,31 @@ export default function App() {
       url.searchParams.append('sort', sortBy);
 
       const res = await fetch(url.toString());
+      const contentType = res.headers.get('content-type');
+
       if (!res.ok) {
-        const errorData = await res.json();
-        console.error('API Error Details:', errorData);
-        throw new Error(errorData.details || 'Failed to fetch expenses');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          console.error('API Error Details:', errorData);
+          throw new Error(errorData.details || errorData.error || 'Failed to fetch expenses');
+        } else {
+          const text = await res.text();
+          console.error('Non-JSON Error Response:', text);
+          throw new Error(`Server error (${res.status}). Check if backend is running.`);
+        }
       }
-      const data = await res.json();
-      setExpenses(data);
-      setError(null);
-    } catch (err) {
-      setError('Could not connect to the server. Please try again.');
+
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        setExpenses(data);
+        setError(null);
+      } else {
+        const text = await res.text();
+        console.error('Unexpected Response Format:', text);
+        throw new Error('Server returned HTML instead of JSON. The API route might be missing or misconfigured.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Could not connect to the server. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -124,23 +139,35 @@ export default function App() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to save expense');
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to save expense');
+        } else {
+          const text = await res.text();
+          console.error('Save error response:', text);
+          throw new Error(`Server error (${res.status}) while saving.`);
+        }
       }
       
-      const newExpense = await res.json();
-      
-      // If it's a new one (not a duplicate response from retry)
-      if (!newExpense.duplicated) {
-        setExpenses(prev => {
-          const updated = [newExpense, ...prev];
-          // Re-sort if needed as the API might return it but we want to be safe
-          return updated.sort((a, b) => {
-            const dateA = new Date(a.date).getTime();
-            const dateB = new Date(b.date).getTime();
-            return sortBy === 'date_desc' ? dateB - dateA : dateA - dateB;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const newExpense = await res.json();
+        
+        // If it's a new one (not a duplicate response from retry)
+        if (!newExpense.duplicated) {
+          setExpenses(prev => {
+            const updated = [newExpense, ...prev];
+            // Re-sort if needed as the API might return it but we want to be safe
+            return updated.sort((a, b) => {
+              const dateA = new Date(a.date).getTime();
+              const dateB = new Date(b.date).getTime();
+              return sortBy === 'date_desc' ? dateB - dateA : dateA - dateB;
+            });
           });
-        });
+        }
+      } else {
+        throw new Error('Server returned invalid response format.');
       }
 
       // Reset form and generate new idempotency key for next entry
@@ -163,11 +190,21 @@ export default function App() {
         method: 'DELETE'
       });
       
-      if (!res.ok) throw new Error('Failed to delete');
+      const contentType = res.headers.get('content-type');
+      if (!res.ok) {
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to delete');
+        } else {
+          const text = await res.text();
+          console.error('Delete error response:', text);
+          throw new Error(`Server error (${res.status}) while deleting.`);
+        }
+      }
       
       setExpenses(prev => prev.filter(exp => exp.id !== id));
-    } catch (err) {
-      setError('Failed to delete expense. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete expense. Please try again.');
     }
   };
 
@@ -214,15 +251,26 @@ export default function App() {
         })
       });
 
+      const contentType = res.headers.get('content-type');
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to update expense');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to update expense');
+        } else {
+          const text = await res.text();
+          console.error('Update error response:', text);
+          throw new Error(`Server error (${res.status}) while updating.`);
+        }
       }
 
-      const updatedExpense = await res.json();
-      setExpenses(prev => prev.map(exp => exp.id === editingId ? updatedExpense : exp));
-      setEditingId(null);
-      setError(null);
+      if (contentType && contentType.includes('application/json')) {
+        const updatedExpense = await res.json();
+        setExpenses(prev => prev.map(exp => exp.id === editingId ? updatedExpense : exp));
+        setEditingId(null);
+        setError(null);
+      } else {
+        throw new Error('Server returned invalid response format.');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to update expense');
     } finally {

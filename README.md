@@ -7,21 +7,20 @@ A full-stack personal finance tool built with React, Express, and Firebase.
 ### Tech Stack
 - **Frontend**: React 19 + Vite + Tailwind CSS + Motion. Chosen for speed, responsiveness, and polished UI.
 - **Backend**: Node.js + Express. Implemented the required API endpoints (`POST /expenses`, `GET /expenses`).
-- **Database**: Firestore (via Firebase Admin). Chosen for its scalability, real-time potential, and robust data persistence in real-world conditions.
+- **Database**: Supabase (PostgreSQL). Chosen for its powerful SQL capabilities and easy-to-use client SDK.
 
 ### Resilience & Correctness
-- **Idempotency**: The `POST /expenses` endpoint supports an `idempotencyKey`. The React client generates a unique UUID for each entry effort. If a network failure occurs and the user (or browser retry logic) sends the same request again, the backend detects the duplicate key and returns the existing record instead of creating a new one.
-- **Money Handling**: Amounts are stored as doubles in Firestore. While integers (cents) are often preferred for strict precision, standard double precision is used here for simplicity in this exercise, formatted correctly in the UI.
-- **Loading & Errors**: Comprehensive UI states for fetching and submitting data ensure a smooth user experience even on slow networks.
+- **Validation**: Strict validation for amounts (no negative values) and dates (no future dates).
+- **Edit/Delete**: Full CRUD functionality implemented for flexible expense management.
+- **Idempotency**: The `POST /expenses` endpoint supports a unique UUID for each entry effort.
 
-### Security
-- **Backend Auth**: The server-side API uses `firebase-admin`, which bypasses client-side rules for controlled operations.
-- **Firestore Rules**: Implemented strict validation and ownership checks (though bypassed by the backend API, they provide a secondary layer of defense if client-side direct access is ever enabled).
+## Deployment
 
-## Getting Started
-The app is configured to run on port 3000.
-The dev server starts the Express backend, which serves the Vite frontend as middleware.
+### Vercel Deployment Note
+If you are deploying to Vercel, ensure you:
+1. Set `SUPABASE_URL` and `SUPABASE_KEY` in your Vercel Project Settings -> Environment Variables.
+2. The included `vercel.json` ensures Express routes are properly mapped.
+3. If you encounter a `JSON.parse` error, check your Vercel logs; it typically means the backend failed to start or a route returned an HTML error page instead of JSON.
 
 ## Intentionally Omitted
-- User Authentication (Login/Signup): Mocked for this exercise to focus on the core expense tracking logic and API resilience.
-- Edit/Delete functionality: Focused on the core requirements of recording and reviewing.
+- User Authentication (Login/Signup): Mocked for this exercise.
