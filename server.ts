@@ -65,11 +65,11 @@ async function startServer() {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-       // Amount validation: Reject negative or zero amounts
+      // Amount validation: Reject negative or zero amounts
       if (Number(amount) <= 0) {
         return res.status(400).json({ error: 'Amount must be greater than zero' });
       }
-      
+
       // Date validation
       const expenseDate = new Date(date);
       const today = new Date();
@@ -78,16 +78,22 @@ async function startServer() {
         return res.status(400).json({ error: 'Cannot record expenses for future dates' });
       }
 
+      const payload: any = {
+        amount: Number(amount),
+        category,
+        description,
+        date,
+        userId: userId || 'anonymous',
+      };
+
+      // Only include idempotency if provided
+      if (idempotencyKey) {
+        payload.idempotency = idempotencyKey;
+      }
+
       const { data, error } = await supabase
         .from('expenses')
-        .insert([{
-          amount: Number(amount),
-          category,
-          description,
-          date,
-          userId: userId || 'anonymous',
-          idempotencyKey: idempotencyKey || null
-        }])
+        .insert([payload])
         .select()
         .single();
 
@@ -97,7 +103,7 @@ async function startServer() {
           const { data: existing } = await supabase
             .from('expenses')
             .select()
-            .eq('idempotencyKey', idempotencyKey)
+            .eq('idempotency', idempotencyKey)
             .single();
           return res.json({ ...existing, duplicated: true });
         }

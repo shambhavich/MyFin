@@ -83,6 +83,20 @@ export default function App() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !description || !date) return;
+    
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError('Amount must be a positive number');
+      return;
+    }
+
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (selectedDate > today) {
+      setError('Cannot record expenses for future dates');
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -90,7 +104,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           category,
           description,
           date,
@@ -99,7 +113,10 @@ export default function App() {
         })
       });
 
-      if (!res.ok) throw new Error('Failed to save expense');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to save expense');
+      }
       
       const newExpense = await res.json();
       
@@ -184,6 +201,7 @@ export default function App() {
                     <input
                       type="number"
                       step="0.01"
+                      min="0.01"
                       required
                       placeholder="0.00"
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
