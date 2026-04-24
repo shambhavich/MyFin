@@ -83,13 +83,7 @@ async function startServer() {
         category,
         description,
         date,
-        userId: userId || 'anonymous',
       };
-
-      // Only include idempotency if provided
-      if (idempotencyKey) {
-        payload.idempotency = idempotencyKey;
-      }
 
       const { data, error } = await supabase
         .from('expenses')
@@ -97,23 +91,75 @@ async function startServer() {
         .select()
         .single();
 
-      if (error) {
-        // Handle duplicate key error (idempotency)
-        if (error.code === '23505') {
-          const { data: existing } = await supabase
-            .from('expenses')
-            .select()
-            .eq('idempotency', idempotencyKey)
-            .single();
-          return res.json({ ...existing, duplicated: true });
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       res.status(201).json(data);
     } catch (error: any) {
       console.error('Error creating expense:', error);
       res.status(500).json({ error: 'Failed to create expense', details: error.message });
+    }
+  });
+
+  // PUT /api/expenses/:id
+  server.put('/api/expenses/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { amount, category, description, date } = req.body;
+
+      if (!amount || !category || !description || !date) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Amount validation
+      if (Number(amount) <= 0) {
+        return res.status(400).json({ error: 'Amount must be greater than zero' });
+      }
+
+      // Date validation
+      const expenseDate = new Date(date);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (expenseDate > today) {
+        return res.status(400).json({ error: 'Cannot record expenses for future dates' });
+      }
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .update({
+          amount: Number(amount),
+          category,
+          description,
+          date,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json(data);
+    } catch (error: any) {
+      console.error('Error updating expense:', error);
+      res.status(500).json({ error: 'Failed to update expense', details: error.message });
+    }
+  });
+
+  // DELETE /api/expenses/:id
+  server.delete('/api/expenses/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      res.json({ success: true, id });
+    } catch (error: any) {
+      console.error('Error deleting expense:', error);
+      res.status(500).json({ error: 'Failed to delete expense', details: error.message });
     }
   });
 
