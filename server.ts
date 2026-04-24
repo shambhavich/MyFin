@@ -65,6 +65,11 @@ async function startServer() {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
+       // Amount validation: Reject negative or zero amounts
+      if (Number(amount) <= 0) {
+        return res.status(400).json({ error: 'Amount must be greater than zero' });
+      }
+      
       // Date validation
       const expenseDate = new Date(date);
       const today = new Date();
