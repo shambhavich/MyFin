@@ -566,7 +566,7 @@ export default function App() {
                                   <p className="font-bold text-slate-900 ml-2 whitespace-nowrap">
                                     ₹{expense.amount.toLocaleString('en-IN')}
                                   </p>
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                                  <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity ml-2">
                                     <button 
                                       onClick={() => startEditing(expense)}
                                       className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
