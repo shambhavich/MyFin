@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 import { 
   Plus, 
   Trash2, 
@@ -611,6 +612,7 @@ export default function App() {
         <p>© 2026 MyFin Expense Tracker</p>
         <p className="font-mono">Built for Resilience & Clarity</p>
       </footer>
+      <Analytics />
     </div>
   );
 }
